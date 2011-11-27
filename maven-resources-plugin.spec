@@ -1,6 +1,6 @@
 Name:           maven-resources-plugin
 Version:        2.4.3
-Release:        2
+Release:        4
 Summary:        Maven Resources Plugin
 
 Group:          Development/Java

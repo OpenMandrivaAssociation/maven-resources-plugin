@@ -1,8 +1,9 @@
 %{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-resources-plugin
 Version:        2.6
-Release:        6.1%{?dist}
+Release:        6.2
 Summary:        Maven Resources Plugin
+Group:	Development/Java
 License:        ASL 2.0
 URL:            http://maven.apache.org/plugins/maven-resources-plugin
 Source0:        http://repo2.maven.org/maven2/org/apache/maven/plugins/%{name}/%{version}/%{name}-%{version}-source-release.zip
@@ -11,7 +12,7 @@ BuildArch: noarch
 BuildRequires:  maven-local
 BuildRequires:  mvn(commons-io:commons-io)
 BuildRequires:  mvn(org.apache.maven.plugin-tools:maven-plugin-annotations)
-BuildRequires:  mvn(org.apache.maven.plugins:maven-plugins)
+BuildRequires:  mvn(org.apache.maven.plugins:maven-plugins:pom:)
 BuildRequires:  mvn(org.apache.maven.shared:maven-filtering)
 BuildRequires:  mvn(org.apache.maven.shared:maven-plugin-testing-harness)
 BuildRequires:  mvn(org.apache.maven:maven-artifact)

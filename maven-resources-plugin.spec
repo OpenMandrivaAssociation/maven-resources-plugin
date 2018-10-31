@@ -1,7 +1,7 @@
 %{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-resources-plugin
 Version:        2.6
-Release:        6.2
+Release:        6.3
 Summary:        Maven Resources Plugin
 Group:	Development/Java
 License:        ASL 2.0

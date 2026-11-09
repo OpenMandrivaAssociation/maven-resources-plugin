@@ -1,2 +1,4 @@
 sources:
+  maven-resources-plugin-3.5.0.tar.gz: 5fbb0e18c2297d61ce4e768769eb12b0fb71236c
+removed_sources:
   maven-resources-plugin-2.6-source-release.zip: a3e69d0ac0fd6ef5c7d07c746377f5a9ae975330

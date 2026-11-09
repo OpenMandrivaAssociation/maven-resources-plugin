@@ -1,123 +1,103 @@
-%{?_javapackages_macros:%_javapackages_macros}
-Name:           maven-resources-plugin
-Version:        2.6
-Release:        6.3
-Summary:        Maven Resources Plugin
-Group:	Development/Java
-License:        ASL 2.0
-URL:            https://maven.apache.org/plugins/maven-resources-plugin
-Source0:        http://repo2.maven.org/maven2/org/apache/maven/plugins/%{name}/%{version}/%{name}-%{version}-source-release.zip
-BuildArch: noarch
+Name:		maven-resources-plugin
+Version:	3.5.0
+Release:	1
+Summary:	Copies project resources to the output directory
+Group:		Development/Java
+License:	Apache-2.0
+URL:		https://maven.apache.org/plugins/maven-resources-plugin/
+Source0:	https://github.com/apache/maven-resources-plugin/archive/refs/tags/maven-resources-plugin-%{version}.tar.gz#/maven-resources-plugin-%{version}.tar.gz
+# The tag has no license file. This copy is in git, so the build does not
+# download it.
+Source1:	LICENSE-2.0.txt
+BuildArch:	noarch
+BuildRequires:	python
+BuildRequires:	maven
+BuildRequires:	maven-components >= 3.10.0
+BuildRequires:	java-current-devel
+# Generates META-INF/maven/plugin.xml. The separate annotations package
+# conflicts with maven-components on the same index file.
+BuildRequires:	maven-plugin-tools
+BuildRequires:	mvn(org.apache.maven.plugins:maven-plugin-plugin)
+BuildRequires:	mvn(org.apache.maven.shared:maven-filtering)
+BuildRequires:	maven-filtering >= 3.5.1
+Requires:	maven-filtering >= 3.5.1
+BuildRequires:	mvn(org.codehaus.plexus:plexus-utils)
+BuildRequires:	plexus-utils >= 3.6.2
+Requires:	plexus-utils >= 3.6.2
+BuildRequires:	mvn(org.apache.maven:maven-plugin-api)
+BuildRequires:	mvn(org.apache.maven:maven-core)
+BuildRequires:	mvn(org.apache.maven:maven-model)
+BuildRequires:	mvn(org.apache.maven.plugin-tools:maven-plugin-annotations)
+BuildRequires:	mvn(javax.inject:javax.inject)
+# javax.inject and jakarta-inject both provide this coordinate.
+BuildRequires:	javax.inject >= 1-2
+Requires:	javax.inject >= 1-2
+BuildSystem:	maven
+BuildOption(install):	--file-name %{name}
 
-BuildRequires:  maven-local
-BuildRequires:  mvn(commons-io:commons-io)
-BuildRequires:  mvn(org.apache.maven.plugin-tools:maven-plugin-annotations)
-BuildRequires:  mvn(org.apache.maven.plugins:maven-plugins:pom:)
-BuildRequires:  mvn(org.apache.maven.shared:maven-filtering)
-BuildRequires:  mvn(org.apache.maven.shared:maven-plugin-testing-harness)
-BuildRequires:  mvn(org.apache.maven:maven-artifact)
-BuildRequires:  mvn(org.apache.maven:maven-core)
-BuildRequires:  mvn(org.apache.maven:maven-model)
-BuildRequires:  mvn(org.apache.maven:maven-monitor)
-BuildRequires:  mvn(org.apache.maven:maven-plugin-api)
-BuildRequires:  mvn(org.apache.maven:maven-project)
-BuildRequires:  mvn(org.apache.maven:maven-settings)
-BuildRequires:  mvn(org.codehaus.plexus:plexus-container-default)
-BuildRequires:  mvn(org.codehaus.plexus:plexus-interpolation)
-BuildRequires:  mvn(org.codehaus.plexus:plexus-utils)
-
-Provides:       maven2-plugin-resources = %{version}-%{release}
-Obsoletes:      maven2-plugin-resources <= 0:2.0.8
+Obsoletes:	maven2-plugin-resources <= 0:2.0.8
+Provides:	maven2-plugin-resources = %{EVRD}
+Obsoletes:	maven-resources-plugin-javadoc < %{EVRD}
 
 %description
-The Resources Plugin handles the copying of project resources
-to the output directory.
-
-%package javadoc
-Summary:        Javadoc for %{name}
-
-%description javadoc
-API documentation for %{name}.
-
+Copies main and test resources into the build output, and filters them
+through maven-filtering. 3.5.0 adds filename filtering and change
+detection. 4.0.0 is still a beta, so this package stays on 3.5.0.
+Tests need JUnit Jupiter, so they are not run.
 
 %prep
-%setup -q 
+%autosetup -n maven-resources-plugin-maven-resources-plugin-%{version}
+rm -rf src/test src/it .github
+cp -p %{SOURCE1} LICENSE
+python - <<'PY'
+import xml.etree.ElementTree as ET
+NS = "http://maven.apache.org/POM/4.0.0"
+ET.register_namespace("", NS)
 
-%build
-%mvn_build -f
+def tag(name):
+    return "{" + NS + "}" + name
 
-%install
-%mvn_install
+def add(parent, name, text):
+    node = ET.SubElement(parent, tag(name))
+    node.text = text
+    return node
+
+root = ET.Element(tag("project"))
+add(root, "modelVersion", "4.0.0")
+add(root, "groupId", "org.apache.maven.plugins")
+add(root, "artifactId", "maven-resources-plugin")
+add(root, "version", "%{version}")
+add(root, "packaging", "maven-plugin")
+add(root, "name", "Apache Maven Resources Plugin")
+props = ET.SubElement(root, tag("properties"))
+add(props, "maven.compiler.release", "8")
+add(props, "project.build.sourceEncoding", "UTF-8")
+deps = ET.SubElement(root, tag("dependencies"))
+items = (
+    ("org.apache.maven.shared", "maven-filtering", "3.5.1", None),
+    ("org.codehaus.plexus", "plexus-utils", "3.6.2", None),
+    ("org.apache.maven", "maven-plugin-api", "3.10.0", "provided"),
+    ("org.apache.maven", "maven-core", "3.10.0", "provided"),
+    ("org.apache.maven", "maven-model", "3.10.0", "provided"),
+    ("org.apache.maven.plugin-tools", "maven-plugin-annotations", "3.15.2", "provided"),
+    ("javax.inject", "javax.inject", "1", "provided"),
+)
+for group, artifact, version, scope in items:
+    dep = ET.SubElement(deps, tag("dependency"))
+    add(dep, "groupId", group)
+    add(dep, "artifactId", artifact)
+    add(dep, "version", version)
+    if scope:
+        add(dep, "scope", scope)
+build = ET.SubElement(root, tag("build"))
+plugins = ET.SubElement(build, tag("plugins"))
+plugin = ET.SubElement(plugins, tag("plugin"))
+add(plugin, "groupId", "org.apache.maven.plugins")
+add(plugin, "artifactId", "maven-plugin-plugin")
+# The lifecycle binding asks for 3.15.1. The packaged plugin is 3.16.0.
+add(plugin, "version", "3.16.0")
+ET.ElementTree(root).write("pom.xml", encoding="utf-8", xml_declaration=True)
+PY
 
 %files -f .mfiles
-
-%files javadoc -f .mfiles-javadoc
-
-%changelog
-* Mon Aug 12 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.6-6
-- Update to current packaging guidelines
-
-* Mon Aug 12 2013 Alexander Kurtakov <akurtako@redhat.com> 2.6-5
-- Build using xmvn.
-
-* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.6-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
-
-* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.6-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
-
-* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 2.6-2
-- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
-- Replace maven BuildRequires with maven-local
-
-* Tue Oct 23 2012 Alexander Kurtakov <akurtako@redhat.com> 2.6-1
-- Update to latest upstream.
-
-* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.5-6
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
-
-* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.5-5
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
-
-* Tue Sep 06 2011 Tomas Radej <tradej@redhat.com> - 2.5-4
-- Fixed dependency on plexus-container-default
-
-* Tue Aug 30 2011 Tomas Radej <tradej@redhat.com> - 2.5-3
-- Added changelog
-
-* Mon Aug 29 2011 Tomas Radej <tradej@redhat.com> - 2.5-1
-- Update to 2.5
-- Guideline fixes
-- Added maven-filtering dep
-
-* Thu Jun 23 2011 Stanislav Ochotnicky <sochotnicky@redhat.com> - 2.4.3-4
-- Add several packages to BR/R as stated in pom.xml
-
-* Tue Jun 21 2011 Alexander Kurtakov <akurtako@redhat.com> 2.4.3-3
-- Build with maven 3.
-
-* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.4.3-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
-
-*Thu Sep 09 2010 Pierre-Yves Chibon <pingou@pingoured.fr> - 2.4.3-1
-- Update to 2.4.3
-
-* Fri May 21 2010 Hui Wang <huwang@redhat.com> - 2.2-6
-- delete duplicate maven2-plugin-jar
-- delete source1
-
-* Tue May 20 2010 Hui Wang <huwang@redhat.com> - 2.2-5
-- Add maven-resources-plugin-demap.xml
-- Set maven test ignore
-
-* Wed May 19 2010 Hui Wang <huwang@redhat.com> - 2.2-4
-- Add missing obsoletes/provides
-
-* Wed May 19 2010 Hui Wang <huwang@redhat.com> - 2.2-3
-- Add missing BR:maven-shared-reporting-impl
-
-* Mon May 17 2010 Hui Wang <huwang@redhat.com> - 2.2-2
-- Fixed install -pm 644 pom.xml
-
-* Thu May 13 2010 Hui Wang <huwang@redhat.com> - 2.2-1
-- Initial version of the package
+%doc LICENSE README.md
